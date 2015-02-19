@@ -1,0 +1,12 @@
+
+/*/
+!/src/
+!/war/*
+
+/war/*/
+!/war/WEB-INF/
+!/war/images/
+
+!/jars/
+!/.*/
+
