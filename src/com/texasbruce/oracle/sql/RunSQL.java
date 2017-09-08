@@ -105,9 +105,10 @@ public class RunSQL {
 	public static void main(String args[]) {
 
 		if (args.length < 3) {
-			System.out.println("Usage - dbUrl dbUser dbPass [statement] [update]");
-			System.out.println("\tif [statement] not provided, enter interactive loop mode.");
-			System.out.println("\t[update_only] should be 1 or 0.");
+			System.out.println("Usage - dbUrl dbUser dbPass [statement] [update]"
+					+ "\n\tif [statement] not provided, enter interactive loop mode."
+					+ "\n\t[update] is a flag to set if this statement is a query or an update;"
+						+" should be 1 (for update) or 0 (for query). Default is 0 if not provided");
 			Runtime.getRuntime().halt(0);
 		}
 
