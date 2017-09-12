@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Scanner;
 
 import org.apache.log4j.Logger;
@@ -26,7 +27,8 @@ public class RunSQL {
 	public static void log(Object o, Throwable e) {
 		if (isLogConfig) {
 			logger.info(o, e);
-		} else {
+		} 
+		else {
 			System.out.println("[" + new java.util.Date().toString() + "] " + o);
 			if (e != null) {
 				System.out.println(e.getMessage() + " - " + e.getClass().getName());
@@ -67,7 +69,8 @@ public class RunSQL {
 				} catch (Exception e) {
 					log("", e);
 				}
-			} else {
+			} 
+			else {
 				rs = ps.executeQuery();
 				int columnCount = ps.getMetaData().getColumnCount();
 				int resultSize = 0;
@@ -93,9 +96,76 @@ public class RunSQL {
 				log("Query result:\n" + output);
 				result = resultSize;
 			}
-		} catch (SQLException e) {
+		} 
+		catch (SQLException e) {
 			log("", e);
-		} finally {
+		}
+		finally {
+			SQLConnMgr.closeResultSet(rs);
+			SQLConnMgr.closeStatement(ps);
+		}
+		return result;
+	}
+
+	public static int runStmt(Connection conn, String stmt, boolean logResultsOnly) {
+		Statement ps = null;
+		ResultSet rs = null;
+		int result = 0;
+		try {
+			ps = conn.createStatement();
+
+			if (!logResultsOnly)
+				log("STMT = " + stmt);
+			
+			boolean isQuery = ps.execute(stmt);
+
+			if (isQuery) {
+				rs = ps.getResultSet();
+				int columnCount = rs.getMetaData().getColumnCount();
+				int resultSize = 0;
+
+				String output = "";
+				for (int i = 1; i <= columnCount; i++) {
+					output += rs.getMetaData().getColumnName(i) + "\t";
+				}
+				output += "\n";
+				while (rs.next()) {
+					for (int i = 1; i <= columnCount; i++) {
+						Object o = rs.getObject(i);
+						if (o instanceof oracle.sql.Datum && o.getClass().getName().contains("TIMESTAMP")) {
+							o = rs.getTimestamp(i);
+						} 
+						else if (o instanceof oracle.sql.Datum && o.getClass().getName().contains("CLOB")) {
+							o = rs.getString(i);
+						}
+						output += o + "\t";
+					}
+					output += "\n";
+					resultSize++;
+				}
+				log("Query result:\n" + output);
+				result = resultSize;
+			}
+			else {
+				int affectedRows = ps.getUpdateCount();
+				if (!logResultsOnly) {
+					log("affected rows = " + affectedRows);
+				}
+				result = affectedRows;
+
+				try {
+					conn.commit();
+				} catch (Exception e) {
+					log("", e);
+				}
+			}
+			
+
+		} 
+		catch (SQLException e) {
+			log("", e);
+		} 
+		finally {
 			SQLConnMgr.closeResultSet(rs);
 			SQLConnMgr.closeStatement(ps);
 		}
@@ -105,10 +175,14 @@ public class RunSQL {
 	public static void main(String args[]) {
 
 		if (args.length < 3) {
-			System.out.println("Usage - dbUrl dbUser dbPass [statement] [update]"
-					+ "\n\tif [statement] not provided, enter interactive loop mode."
-					+ "\n\t[update] is a flag to set if this statement is a query or an update;"
-						+" should be 1 (for update) or 0 (for query). Default is 0 if not provided");
+//			System.out.println("Usage - dbUrl dbUser dbPass [statement] [update]"
+//					+ "\n\tif [statement] not provided, enter interactive loop mode."
+//					+ "\n\t[update] is a flag to set if this statement is a query or an update;"
+//						+" should be 1 (for update) or 0 (for query). Default is 0 if not provided");
+
+			System.out.println("Usage - dbUrl dbUser dbPass [statement]"
+					+ "\n\tif [statement] not provided, enter interactive loop mode.");
+
 			Runtime.getRuntime().halt(0);
 		}
 
@@ -118,14 +192,16 @@ public class RunSQL {
 			String user = args[1];
 			String password = args[2];
 			String sql = args.length > 3 ? args[3] : null;
-			boolean update = args.length > 4 && "1".equals(args[4]);
+//			boolean update = args.length > 4 && "1".equals(args[4]);
 			boolean logResultsOnly = Boolean.parseBoolean(System.getProperty("LOGRESULTSONLY", "true"));
 
 			conn = SQLConnMgr.getConnectionFromDriver(url, user, password);
 
 			if (sql == null || "".equalsIgnoreCase(sql)) {
 				// Starting interactive shell
-				try (Scanner scStdin = new Scanner(System.in)) {
+				Scanner scStdin = null;
+				try {
+					scStdin = new Scanner(System.in);
 
 					boolean toContinue = true;
 					while (toContinue) {
@@ -134,20 +210,28 @@ public class RunSQL {
 							if (stmt == null || "".equalsIgnoreCase(stmt)) {
 								toContinue = false;
 							} else {
-								runStmt(conn, stmt, update, logResultsOnly);
+//								runStmt(conn, stmt, update, logResultsOnly);
+								runStmt(conn, stmt, logResultsOnly);
 							}
 						} else {
 							toContinue = false;
 						}
 					}
 
-				} catch (Exception e) {
+				} 
+				catch (Exception e) {
 					log("", e);
 				}
-			} else {
-				runStmt(conn, sql, update, logResultsOnly);
+				finally {
+					try { scStdin.close(); } catch (Exception e) {}
+				}
+			} 
+			else {
+//				runStmt(conn, sql, update, logResultsOnly);
+				runStmt(conn, sql, logResultsOnly);
 			}
-		} catch (Exception e) {
+		} 
+		catch (Exception e) {
 			log("", e);
 		}
 		SQLConnMgr.closeConnection(conn);

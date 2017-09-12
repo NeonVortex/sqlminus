@@ -4,10 +4,8 @@ sqlminus
 
 Usage
 
-    dbUrl dbUser dbPass \[statement\] \[update\]
+    dbUrl dbUser dbPass \[statement\]
   * If [statement] not provided, enter interactive loop mode.
-  * [update] is a flag to set if this statement is a query or an update; should be 1 (for update) or 0 (for query). Default is 0 if not provided
 
 JVM Parameters
-- LOGRESULTSONLY=1/0 Print results only or debug messages
-
+- LOGRESULTSONLY=1/0, Print results only or debug messages
